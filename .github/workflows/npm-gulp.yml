@@ -1,0 +1,55 @@
+name: NodeJS with Gulp
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Cache Node.js modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.npm
+          node_modules
+        key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ matrix.node-version }}-
+          ${{ runner.os }}-node-
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm' # Automatically caches npm dependencies
+
+    - name: Install dependencies
+      run: npm ci # Use npm ci for faster and more reliable installs
+
+    - name: Build project
+      run: gulp # Run your Gulp build
+
+    - name: Run tests
+      run: npm test # Add your test command here, e.g., jest or mocha
+
+    - name: Upload coverage report (optional)
+      if: success() # Only run this if the build and tests were successful
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage/lcov.info # Adjust the path to your coverage report
+
+    - name: Notify on failure (optional)
+      if: failure()
+      run: echo "Build failed for Node.js version ${{ matrix.node-version }}! - Mark Tolentino" # Custom notification command can be added here
